@@ -1,0 +1,1 @@
+# output store an image representing a freeze pipeline stage snapshot

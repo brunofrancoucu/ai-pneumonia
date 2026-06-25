@@ -25,8 +25,8 @@ def standardize_xray(image_path: Path | str, target_size, zoom_factor) -> np.nda
     zoom_start = (min_dim - zoom_dim) // 2
     zoomed_img = square_img[zoom_start : zoom_start + zoom_dim, 
                             zoom_start : zoom_start + zoom_dim]
-    
-    # 3. Resize to target size (256x256)
+
+    # 3. Resize to target size
     resized_img = cv2.resize(zoomed_img, target_size, interpolation=cv2.INTER_CUBIC)
     
     # 4. Illumination & Contrast: CLAHE

@@ -1,7 +1,40 @@
-# Pipeline
+# Installation & Usage
+
+```bash
+uv sync
+```
+
+> CPU/GPU [config file](/config.json)
+
+### Training (optional)
+
+Weights are already computed
+
+```bash
+uv run python src/train.py
+```
+
+### Testing
+
+```bash
+uv run python src/test.py
+```
+
+### Validation Prediction
+
+Generate `.csv` fromatted prediction for validation dataset from kaggle
+
+```bash
+uv run python src/validation.py
+```
+> Output: `src/prediction.csv`
+
+# Training Pipeline
 ___
 
-## 1. Standarization (offline)
+<!-- Train Snapshot process image -->
+
+## 1. Standardization (offline)
 
 ### Objective: 
 Minimize the **variance** caused by irrelevant **noise**. For instance, darker/brighter X-ray machine outputs or extra pixels not within lungs area.
@@ -9,7 +42,9 @@ Minimize the **variance** caused by irrelevant **noise**. For instance, darker/b
 ### Result:
 Clean, uniform dataset. Network's loss function only penalizes mistakes made on the actual pathology.
 
-> **Requires**: Once deployed, images must go through standarization.
+Also allows for lower image size and increased VRAM effectiveness (higher batch size)
+
+> **Requires**: Once deployed, images must go through standardization.
 
 ### Process:
 -   Enforce CLAHE (Illumination & Contrast)
@@ -18,22 +53,29 @@ Clean, uniform dataset. Network's loss function only penalizes mistakes made on 
 
 ## 2. Augmentation
 
+![Augmentation](/docs/augmentation.JPG)
+
+> Reference. [src/model/augmentation.py](/src/model/augmentation.py)
+
 ### Objective:
 Avoid overfitting of characteristics (lighting | background | rotation), generate positive pairs $(i, j)$. Matching "real world" plausible variation, example for rotation: [test_0055.jpeg](/assets/test/test_0055.jpeg)
 
 ### Process:
 
 - Translation (5% limit)
+- Scaling, min-scale of 0.75
+- Rotation (max 15 deg)
 - Horizontal Flip 
 
 > <small>Consideration: Moves the heart to the right side of the chest (simulating situs inversus). For pneumonia detection—which focuses on lung tissue opacities—this anatomical mirroring is completely acceptable and highly beneficial for training. It would only be problematic if you were specifically diagnosing cardiomegaly (enlarged heart) based on lateral orientation.</small>
 
-- Scaling, min-scale of 0.75
-- Rotation (max 15 deg)
+## 3. Encoder (Contrastive Pre-Training, phase 1)
 
-## 3. Encoder
+The backbone (detective), extract & summarize relevant biological features. Neural network, Pytorch architecture, and two-stage training process required in contrastive learning?.
 
-Neural network, Pytorch architecture, and two-stage training process required in contrastive learning?.
+![Phase 1](/docs/phase_1.JPG)
+
+> Reference. [src/train.py](/src/train.py)
 
 ### Objective:
 Compress pixels into a hidden feature vector. Extract a high dimensional vector representation ($h$). Map to lower dimension latent space ($z$)
@@ -44,16 +86,20 @@ Force the latent codes of the two augmented crops to be nearly identical.
 ### Process:
 Phase 1 Contrastive pre-training:
 -   Convolutional Network (**ResNet-50** or DenseNet)
--   Pass small multi-layer perceptron (MLP)
+-   MLP: Projection Head: Maps high-dimensional h to lower-dimensional z (high detailed and overfitted will be deleted!)
 
-Phase 2 Classification (linear evaluation):
--   Discard projection head
--   Attach class head to backbone encoder
+#### Optimizer: **AdamW**
 
-fine tuning loop
--   freezed weights, standard Cross-Entropy Loss teach difference 
+<!-- > Reference. [src/utils/loss.py](/src/model/utils/scheduler.py) -->
 
-### Loss Function
+#### Scheduler: Cosine
+
+![Scheduler](/docs/scheduler.JPG)
+
+> Reference. [src/model/utils/scheduler.py](/src/model/utils/scheduler.py)
+
+#### Loss: **SupCon**
+<!-- TODO: Update to supcon loss & move to proper stage -->
 
 positive pair of augmented views $(i, j)$ generated from the same underlying scan, the network optimizes statistical expectations by minimizing this loss:
 
@@ -61,10 +107,30 @@ $$L_{i,j} = -\log \frac{\exp(\text{sim}(z_i, z_j) / \tau)}{\sum_{k=1}^{2N} \math
 
 Where $\text{sim}(\cdot, \cdot)$ is the cosine similarity between the two feature vectors, and $\tau$ is a temperature hyperparameter that scales the penalty for hard negative examples within your training batch.
 
-### Projection Head?
-lower dimension z
+> Reference. [src/model/utils/loss.py](/src/model/utils/loss.py)
 
-## 4. Heatmap
+## 4. Classification Head (Linear Evaluation)
+
+![Phase 2](/docs/phase_2.JPG)
+
+> Reference. [src/train.py](/src/train.py)
+
+### Process:
+-   Discard projection head
+-   Attach class head to backbone encoder
+
+fine tuning loop
+-   freezed weights, standard Cross-Entropy Loss teach difference 
+
+## 5. Fine-Tuning
+
+Full Network Fine-Tuning, both Backbone and Classification train together
+
+![Phase 3](/docs/phase_3.JPG)
+
+> Reference. [src/train.py](/src/train.py)
+
+## 6. Heatmap
 Using a post-training explainability technique called **Grad-CAM** (Gradient-weighted Class Activation Mapping).
 
 ### Result:
