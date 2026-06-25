@@ -36,23 +36,23 @@ def train_resnet(device, epochs):
             scheduler.step()    # smooth lr curve
             total_loss += loss.item()
             
-        checkpoint_path = f'src/weights/contrastive_encoder_epoch_{epoch+1}.pth'
+        checkpoint_path = f'src/weights/__contrastive_encoder_epoch_{epoch+1}.pth'
         if (epoch + 1) % 10 == 0: torch.save(model.state_dict(), checkpoint_path)
         print(f"Epoch {epoch+1} | Contrastive Loss: {total_loss/len(augmented_images):.4f}")
     
     # Save the trained encoder
-    torch.save(model.state_dict(), 'src/weights/contrastive_encoder.pth')
-    print(f"Trained model saved at 'src/weights/contrastive_encoder.pth'")
+    torch.save(model.state_dict(), 'src/weights/__contrastive_encoder.pth')
+    print(f"Trained model saved at 'src/weights/__contrastive_encoder.pth'")
     return model
 
-def train_classifier(device, epochs=20):
+def train_classifier(device, epochs=20,encoder_epoch=10):
     """
     Phase 2: Linear Evaluation (Classification training)
     """
     views = get_dataloader("src/dataset/train", shuffle=True)
     # Load Resnet
     encoder = ContrastiveEncoder().to(device)
-    encoder.load_state_dict(torch.load('src/weights/contrastive_encoder.pth'))
+    encoder.load_state_dict(torch.load(f'src/weights/__contrastive_encoder_epoch_{encoder_epoch}.pth'))
     
     # 1. Discard projection head & freeze backbone weights
     for param in encoder.parameters():
@@ -85,10 +85,10 @@ def train_classifier(device, epochs=20):
         print(f"Epoch {epoch+1} | Classification Loss: {total_loss/len(views):.4f}")
 
     # Save Head
-    torch.save(class_head.state_dict(), 'src/weights/classifier_head.pth')
-    print(f"Saved classifier head to 'src/weights/classifier_head.pth'")
+    torch.save(class_head.state_dict(), f"src/weights/classifier_head_epoch_{encoder_epoch}.pth")
+    print(f"Saved classifier head to 'src/weights/classifier_head_epoch_{encoder_epoch}.pth'")
 
-def fine_tune(device, epochs):
+def fine_tune(device, epochs, encoder_epoch=10):
     """
     Phase 3: Full Network Fine-Tuning
     Backbone and Classification train together
@@ -97,10 +97,10 @@ def fine_tune(device, epochs):
     criterion = torch.nn.CrossEntropyLoss()
     # Load ResNet
     encoder = ContrastiveEncoder().to(device)
-    encoder.load_state_dict(torch.load('src/weights/contrastive_encoder.pth'))
+    encoder.load_state_dict(torch.load(f'src/weights/__contrastive_encoder_epoch_{encoder_epoch}.pth'))
     # Load Linear Evaluator
     class_head = LinearEvaluator(feature_dim=encoder.feature_dim).to(device)
-    class_head.load_state_dict(torch.load('src/weights/classifier_head.pth'))
+    class_head.load_state_dict(torch.load(f'src/weights/classifier_head_epoch_{encoder_epoch}.pth'))
     
     # 1. Unfreeze the backbone
     for param in encoder.parameters():
@@ -132,12 +132,12 @@ def fine_tune(device, epochs):
         print(f"Fine-Tune Epoch {epoch+1} | Loss: {total_loss/len(views):.4f}")
     
     # Save Model
-    torch.save(encoder.state_dict(), 'src/weights/finetuned_encoder.pth')
-    print(f"Saved fine tuned model to 'src/weights/finetuned_encoder.pth'")
+    torch.save(encoder.state_dict(), f'src/weights/finetuned_encoder_epoch_{encoder_epoch}.pth')
+    print(f"Saved fine tuned model to src/weights/finetuned_encoder_epoch_{encoder_epoch}.pth")
 
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    train_resnet(device, epochs=50) # Phase 1
-    train_classifier(device, epochs=20) # Phase 2
-    fine_tune(device, epochs=7) # Phase 3
+    # train_resnet(device, epochs=50) # Phase 1
+    train_classifier(device, epochs=20, encoder_epoch=10) # Phase 2
+    fine_tune(device, epochs=7, encoder_epoch=10) # Phase 3
