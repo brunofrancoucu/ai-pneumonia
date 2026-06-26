@@ -11,7 +11,7 @@ from model.utils.load_config import cfg
 from model.utils.dataloader import get_dataloader
 
 if __name__ == "__main__":
-    epoch = 10
+    epoch = 2
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     # Load Trained Model (from /weights)

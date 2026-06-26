@@ -37,13 +37,8 @@ def train_resnet(device, epochs):
             total_loss += loss.item()
             
         checkpoint_path = f'src/weights/__contrastive_encoder_epoch_{epoch+1}.pth'
-        if (epoch + 1) % 10 == 0: torch.save(model.state_dict(), checkpoint_path)
+        if ((epoch + 1) % 10 == 0) | epoch + 1 == epochs: torch.save(model.state_dict(), checkpoint_path)
         print(f"Epoch {epoch+1} | Contrastive Loss: {total_loss/len(augmented_images):.4f}")
-    
-    # Save the trained encoder
-    torch.save(model.state_dict(), 'src/weights/__contrastive_encoder.pth')
-    print(f"Trained model saved at 'src/weights/__contrastive_encoder.pth'")
-    return model
 
 def train_classifier(device, epochs=20,encoder_epoch=10):
     """
@@ -138,6 +133,6 @@ def fine_tune(device, epochs, encoder_epoch=10):
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # train_resnet(device, epochs=50) # Phase 1
-    train_classifier(device, epochs=20, encoder_epoch=10) # Phase 2
-    fine_tune(device, epochs=7, encoder_epoch=10) # Phase 3
+    # train_resnet(device, epochs=2) # Phase 1 (default: 10)
+    train_classifier(device, epochs=4, encoder_epoch=2) # Phase 2 (default: 20)
+    fine_tune(device, epochs=1, encoder_epoch=2) # Phase 3 (default: 7)

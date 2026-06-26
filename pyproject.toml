@@ -5,6 +5,7 @@ description = "Ref. readme"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "grad-cam>=1.5.5",
     "ipykernel>=7.2.0",
     "matplotlib>=3.10.8",
     "opencv-python>=4.13.0.92",
