@@ -1,6 +1,7 @@
 import os
 import cv2
 import numpy as np
+import argparse
 import torch
 import torch.nn as nn
 from torchvision.transforms import v2
@@ -30,8 +31,8 @@ def generate_heatmap(img_path, save_path, device):
     classifier = LinearEvaluator(feature_dim=encoder.feature_dim).to(device)
     
     # Load your Phase 3 Fine-Tuned weights!
-    encoder.load_state_dict(torch.load('src/weights/finetuned_encoder_epoch_10.pth', map_location=device))
-    classifier.load_state_dict(torch.load('src/weights/classifier_head_epoch_10.pth', map_location=device))
+    encoder.load_state_dict(torch.load('src/weights/finetuned_encoder_epoch_20.pth', map_location=device))
+    classifier.load_state_dict(torch.load('src/weights/classifier_head_epoch_20.pth', map_location=device))
     
     # Ensure they are in eval mode
     encoder.eval()
@@ -80,9 +81,26 @@ def generate_heatmap(img_path, save_path, device):
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-    # Point this at an image you know has Pneumonia
-    filename = "pneumo_1465v2537"
-    test_image_path = f"src/dataset/test/{filename}.jpeg" 
-    output_path = f"output/heatmap_{filename}.jpg"
+    # 1. Initialize the Argument Parser
+    parser = argparse.ArgumentParser(description="Generate a Grad-CAM heatmap for a given X-ray scan.")
     
-    generate_heatmap(test_image_path, output_path, device)
+    # 2. Define the expected console argument
+    parser.add_argument(
+        "image_path", 
+        type=str, 
+        nargs='?', # This makes the argument optional
+        help="The file path to the input X-ray image (e.g., src/dataset/test/pneumo_1465.jpeg)"
+    )
+    
+    # 3. Parse the console command
+    args = parser.parse_args()
+    
+    # Extract the filename from the path to create a clean output name
+    filename = os.path.basename(args.image_path) if args.image_path else "pneumo_1465v2537.jpg"
+    output_path = f"output/heatmap_{filename}"
+    
+    # Ensure the output directory exists
+    os.makedirs("output", exist_ok=True)
+    
+    # 4. Run the function using the console argument
+    generate_heatmap(args.image_path if args.image_path else "src/dataset/test/pneumo_1465v2537.jpeg", output_path, device)
