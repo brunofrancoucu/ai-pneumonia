@@ -1,6 +1,6 @@
 # Pneumonia Detection
 
-![Output](/docs/thumbnail.jpg)
+![Output](/docs/thumbnail.JPG)
 
 A PyTorch-based deep learning pipeline for **detecting pneumonia in chest X-rays**, utilizing contrastive pre-training (ResNet-50) and supervised linear evaluation. The repository features a complete workflow from offline image standardization to Grad-CAM heatmap explainability.
 
