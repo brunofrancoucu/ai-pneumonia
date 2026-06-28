@@ -1,4 +1,10 @@
-# Installation & Usage
+# Pneumonia Detection
+
+![Output](/docs/thumbnail.jpg)
+
+A PyTorch-based deep learning pipeline for **detecting pneumonia in chest X-rays**, utilizing contrastive pre-training (ResNet-50) and supervised linear evaluation. The repository features a complete workflow from offline image standardization to Grad-CAM heatmap explainability.
+
+## Installation
 
 ```bash
 uv sync
@@ -6,18 +12,11 @@ uv sync
 
 > CPU/GPU [config file](/config.json)
 
-### Training (optional)
-
-Weights are already computed
+### Running
 
 ```bash
-uv run python src/train.py
-```
-
-### Testing
-
-```bash
-uv run python src/test.py
+uv run python src/train.py  # Training (optiona)
+uv run python src/test.py   # Testing (Weights at src/weights)
 ```
 
 ### Validation Prediction
@@ -29,10 +28,18 @@ uv run python src/validation.py
 ```
 > Output: `src/prediction.csv`
 
-# Training Pipeline
-___
+### Generate Heatmap
 
-<!-- Train Snapshot process image -->
+Generate a heatmap version of the x-ray scan.
+
+```bash
+uv run python src/heatmap.py .\src\heatmap.py src/dataset/test/pneumo_1465v2537.jpeg
+```
+> Output: `src/prediction.csv`
+
+# Training Pipeline
+
+![ResNet 50](/docs/resnet50.JPG)
 
 ## 1. Standardization (offline)
 
